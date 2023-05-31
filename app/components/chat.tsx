@@ -51,8 +51,9 @@ import Locale from "../locales";
 import { IconButton } from "./button";
 import styles from "./home.module.scss";
 import chatStyle from "./chat.module.scss";
+import chatRenameStyle from "./chat.rename.module.scss";
 
-import { ListItem, Modal } from "./ui-lib";
+import { ListItem, Modal, Input } from "./ui-lib";
 import { useLocation, useNavigate } from "react-router-dom";
 import { LAST_INPUT_KEY, Path, REQUEST_TIMEOUT_MS } from "../constant";
 import { Avatar } from "./emoji";
@@ -402,6 +403,32 @@ export function ChatActions(props: {
   );
 }
 
+function ChangeSessionNameModal(props: {
+  sessionName: string;
+  onClose: () => void;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="modal-mask">
+      <Modal title="重命名对话" onClose={props.onClose}>
+        <div className={chatRenameStyle["change-session"]}>
+          <Input
+            rows={1}
+            value={props.sessionName}
+            onChange={(e) => props.onChange((e.target as any).value)}
+          ></Input>
+          <IconButton
+            text="确定"
+            bordered
+            type="primary"
+            onClick={props.onClose}
+          />
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
 export function Chat() {
   type RenderMessage = ChatMessage & { preview?: boolean };
 
@@ -414,6 +441,7 @@ export function Chat() {
   const fontSize = config.fontSize;
 
   const [showExport, setShowExport] = useState(false);
+  const [showRenameModal, setShowRenameModal] = useState(false);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [userInput, setUserInput] = useState("");
@@ -421,6 +449,7 @@ export function Chat() {
   const { submitKey, shouldSubmit } = useSubmitHandler();
   const { scrollRef, setAutoScroll, scrollToBottom } = useScrollToBottom();
   const [hitBottom, setHitBottom] = useState(true);
+  const [sessionName, setSessionName] = useState(session.topic || "");
   const isMobileScreen = useMobileScreen();
   const navigate = useNavigate();
 
@@ -650,9 +679,20 @@ export function Chat() {
   const [showPromptModal, setShowPromptModal] = useState(false);
 
   const renameSession = () => {
-    const newTopic = prompt(Locale.Chat.Rename, session.topic);
-    if (newTopic && newTopic !== session.topic) {
-      chatStore.updateCurrentSession((session) => (session.topic = newTopic!));
+    // const newTopic = prompt(Locale.Chat.Rename, session.topic);
+    setSessionName(session.topic);
+    setShowRenameModal(true);
+    // if (newTopic && newTopic !== session.topic) {
+    //   chatStore.updateCurrentSession((session) => (session.topic = newTopic!));
+    // }
+  };
+
+  const handleRenameModalClose = () => {
+    setShowRenameModal(false);
+    if (sessionName && sessionName !== session.topic) {
+      chatStore.updateCurrentSession(
+        (session) => (session.topic = sessionName),
+      );
     }
   };
 
@@ -881,6 +921,13 @@ export function Chat() {
 
       {showExport && (
         <ExportMessageModal onClose={() => setShowExport(false)} />
+      )}
+      {showRenameModal && (
+        <ChangeSessionNameModal
+          sessionName={sessionName}
+          onChange={(val) => setSessionName(val)}
+          onClose={handleRenameModalClose}
+        />
       )}
     </div>
   );
